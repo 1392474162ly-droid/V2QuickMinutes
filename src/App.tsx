@@ -44,13 +44,46 @@ import { REFERENCE_DECKS, LANGUAGE_CODES, SIMULATED_DIALOGUES, ReferenceDeck, Sl
 import StartPage from "./components/StartPage";
 // @ts-ignore
 import stickerDog from "./assets/images/sticker_dog.png";
+// @ts-ignore
 import stickerCat from "./assets/images/sticker_cat.png";
+// @ts-ignore
 import stickerTiger from "./assets/images/sticker_tiger.png";
+// @ts-ignore
+import stickerCroc from "./assets/images/sticker_croc.png";
+// @ts-ignore
+import stickerLion from "./assets/images/sticker_lion.png";
+// @ts-ignore
+import stickerTurtle from "./assets/images/sticker_turtle.png";
+// @ts-ignore
+import stickerFlamingo from "./assets/images/sticker_flamingo.png";
+// @ts-ignore
+import stickerPolarbear from "./assets/images/sticker_polarbear.png";
+// @ts-ignore
+import stickerGiraffe from "./assets/images/sticker_giraffe.png";
+// @ts-ignore
+import stickerFox from "./assets/images/sticker_fox.png";
+// @ts-ignore
+import stickerKoala from "./assets/images/sticker_koala.png";
+// @ts-ignore
+import doorClosed from "./assets/images/door_closed_v2.png";
+// @ts-ignore
+import doorOpen from "./assets/images/door_open_v2.png";
 
-const AVATAR_STICKERS = [stickerDog, stickerCat, stickerTiger];
-const getAvatarForPerson = (id: number) => {
+const AVATAR_STICKERS = [stickerDog, stickerCat, stickerTiger, stickerCroc, stickerLion, stickerTurtle, stickerFlamingo, stickerPolarbear, stickerGiraffe, stickerFox, stickerKoala];
+const getAvatarForPerson = (id: number, avatarIndex?: number) => {
+  if (avatarIndex !== undefined && avatarIndex >= 0 && avatarIndex < AVATAR_STICKERS.length) {
+    return AVATAR_STICKERS[avatarIndex];
+  }
   const idx = ((id - 1) % AVATAR_STICKERS.length + AVATAR_STICKERS.length) % AVATAR_STICKERS.length;
   return AVATAR_STICKERS[idx];
+};
+
+const formatShortName = (fullName: string) => {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 1) return parts[0] || "";
+  const first = parts[0];
+  const secondInitial = parts[1].charAt(0).toUpperCase();
+  return `${first} ${secondInitial}.`;
 };
 
 interface Participant {
@@ -60,6 +93,7 @@ interface Participant {
   title: string;
   color: string;
   isPlaceholder?: boolean;
+  avatarIndex?: number;
 }
 
 interface Seat {
@@ -433,6 +467,7 @@ export default function App() {
   const [gridCols, setGridCols] = useState(5);
   const [gridRows, setGridRows] = useState(2);
   const [selectedUnseatedId, setSelectedUnseatedId] = useState<number | null>(null);
+  const [isDoorHovered, setIsDoorHovered] = useState(false);
 
   // Drag and drop seating coordination
   const [draggingSeatId, setDraggingSeatId] = useState<number | null>(null);
@@ -508,6 +543,78 @@ export default function App() {
 
   // Quick highlight color pallete
   const highlightColors = ["#FEF08A", "#BBF7D0", "#FBCFE8", "#E2E8F0"]; // Yellow, Green, Pink, Slate
+
+  // Automatically adjust seating arrangement whenever the participants count, the layout style, or grid matrix dimensions change
+  useEffect(() => {
+    const cx = 50;
+    const cy = 50;
+    const radius = 34;
+
+    if (seatingShape === "round") {
+      const count = Math.max(1, participants.length);
+      const generated: Seat[] = [];
+      for (let i = 0; i < count; i++) {
+        const angle = -Math.PI / 2 + i * ((2 * Math.PI) / count);
+        generated.push({
+          id: i + 1,
+          x: cx + radius * Math.cos(angle),
+          y: cy + radius * Math.sin(angle),
+          participantId: participants[i]?.id || null,
+        });
+      }
+      setSeats(generated);
+    } else if (seatingShape === "rect") {
+      const count = Math.max(1, participants.length);
+      const generated: Seat[] = [];
+      const topCount = Math.ceil(count / 2);
+      const bottomCount = count - topCount;
+      
+      // Top row
+      for (let i = 0; i < topCount; i++) {
+        const x = topCount > 1 ? 15 + i * (70 / (topCount - 1)) : 50;
+        generated.push({
+          id: i + 1,
+          x,
+          y: 25,
+          participantId: participants[i]?.id || null,
+        });
+      }
+      // Bottom row
+      for (let i = 0; i < bottomCount; i++) {
+        const x = bottomCount > 1 ? 15 + i * (70 / (bottomCount - 1)) : 50;
+        generated.push({
+          id: topCount + i + 1,
+          x,
+          y: 75,
+          participantId: participants[topCount + i]?.id || null,
+        });
+      }
+      setSeats(generated);
+    } else if (seatingShape === "rows") {
+      const generated: Seat[] = [];
+      let seatId = 1;
+      const colStep = gridCols > 1 ? 70 / (gridCols - 1) : 0;
+      const rowStep = gridRows > 1 ? 55 / (gridRows - 1) : 0;
+
+      for (let r = 0; r < gridRows; r++) {
+        for (let c = 0; c < gridCols; c++) {
+          const x = gridCols > 1 ? 15 + c * colStep : 50;
+          const y = gridRows > 1 ? 35 + r * rowStep : 60;
+          
+          // Try to preserve current assignments if they exist and fit in new grid
+          const previousSeat = seats.find(s => s.id === seatId);
+          generated.push({
+            id: seatId,
+            x,
+            y,
+            participantId: previousSeat ? previousSeat.participantId : null,
+          });
+          seatId++;
+        }
+      }
+      setSeats(generated);
+    }
+  }, [participants.length, seatingShape, gridCols, gridRows]);
 
   const checkEditorIsEmpty = () => {
     if (!editorRef.current) return true;
@@ -1603,99 +1710,18 @@ export default function App() {
   // Seating templates
   const applySeatingTemplate = (shape: "round" | "rect" | "rows") => {
     setSeatingShape(shape);
-    let generated: Seat[] = [];
-    const radius = 34;
-    const cx = 50;
-    const cy = 50;
-
-    if (shape === "round") {
-      // Position around round table
-      const count = 6;
-      for (let i = 0; i < count; i++) {
-        const angle = -Math.PI / 2 + i * ((2 * Math.PI) / count);
-        generated.push({
-          id: i + 1,
-          x: cx + radius * Math.cos(angle),
-          y: cy + radius * Math.sin(angle),
-          participantId: participants[i]?.id || null,
-        });
-      }
-    } else if (shape === "rect") {
-      // Rectangular table layout
-      const topCount = 3;
-      const bottomCount = 3;
-      // Top row
-      for (let i = 0; i < topCount; i++) {
-        generated.push({
-          id: i + 1,
-          x: 25 + i * 25,
-          y: 25,
-          participantId: participants[i]?.id || null,
-        });
-      }
-      // Bottom row
-      for (let i = 0; i < bottomCount; i++) {
-        generated.push({
-          id: topCount + i + 1,
-          x: 25 + i * 25,
-          y: 75,
-          participantId: participants[topCount + i]?.id || null,
-        });
-      }
-    } else {
-      // Rows default
-      generateRowsOfSeats(gridCols, gridRows);
-      return;
-    }
-    setSeats(generated);
     showToast(`Seating shape template loaded as ${shape}`);
   };
 
   // Requirement 9: Generate Seats X * Rows Y
   const generateRowsOfSeats = (cols: number, rows: number) => {
-    const generated: Seat[] = [];
-    let seatId = 1;
-    const colStep = cols > 1 ? 70 / (cols - 1) : 0;
-    const rowStep = rows > 1 ? 55 / (rows - 1) : 0;
-
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const x = cols > 1 ? 15 + c * colStep : 50;
-        const y = rows > 1 ? 35 + r * rowStep : 60;
-        generated.push({
-          id: seatId++,
-          x,
-          y,
-          participantId: null,
-        });
-      }
-    }
-    setSeats(generated);
+    setGridCols(cols);
+    setGridRows(rows);
     showToast(`Generated row grid of ${cols} × ${rows} (${cols * rows} seats)`);
   };
 
-  const changeSeatCount = (newCount: number) => {
-    if (newCount < 1) return;
-    setSeats(prev => {
-      if (prev.length < newCount) {
-        // Add new seats in neat default grid coordinates
-        const added: Seat[] = [];
-        for (let i = prev.length; i < newCount; i++) {
-          added.push({
-            id: i + 1,
-            x: 20 + (i % 4) * 20,
-            y: 35 + Math.floor(i / 4) * 15,
-            participantId: null
-          });
-        }
-        return [...prev, ...added];
-      } else if (prev.length > newCount) {
-        // Remove trailing seats
-        return prev.slice(0, newCount);
-      }
-      return prev;
-    });
-    showToast(`Updated total boardroom seats to ${newCount}`);
+  const changeSeatCount = (_newCount: number) => {
+    // No-op because capacity inputs are removed and handled automatically by layout template selection
   };
 
   // --- Participant Editing and Add ---
@@ -1813,6 +1839,28 @@ export default function App() {
     setNewOrg("");
     setNewTitle("");
     showToast(`Added ${newPerson.name} to list`);
+  };
+
+  const handleAddUnknownAttendee = () => {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const unknownCount = participants.filter(p => p.name.startsWith("Unknown Attendee ")).length;
+    const letter = alphabet[unknownCount % 26] + (unknownCount >= 26 ? Math.floor(unknownCount / 26) + 1 : "");
+    const name = `Unknown Attendee ${letter}`;
+    const colors = ["#0F766E", "#C2410C", "#1D4ED8", "#7C3AED", "#DB2777", "#2563EB", "#059669"];
+    const randColor = colors[participants.length % colors.length];
+
+    const newPerson: Participant = {
+      id: Date.now(),
+      name,
+      org: "External Guest",
+      title: "Unknown",
+      color: randColor,
+      isPlaceholder: true,
+      avatarIndex: participants.length % 3
+    };
+
+    setParticipants(prev => [...prev, newPerson]);
+    showToast(`Added ${newPerson.name}`);
   };
 
   const deleteParticipant = (id: number) => {
@@ -2505,13 +2553,11 @@ export default function App() {
                       {/* Sticker in its own shape, not cut in circle */}
                       <div className="w-12 h-10 flex items-center justify-center shrink-0 relative">
                         <img
-                          src={getAvatarForPerson(person.id)}
+                          src={getAvatarForPerson(person.id, person.avatarIndex)}
                           alt={person.name}
                           className="w-12 h-10 object-contain"
                           referrerPolicy="no-referrer"
                         />
-                        {/* Colored dot in corner of avatar for organization color coding */}
-                        <span className="absolute bottom-0 right-1 w-2.5 h-2.5 rounded-full border border-white shadow-xs" style={{ backgroundColor: person.color }}></span>
                       </div>
                       
                       {editingParticipantId === person.id ? (
@@ -2565,7 +2611,7 @@ export default function App() {
                       ) : (
                         <div className="flex-1 min-w-0 pr-6">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-extrabold text-slate-800 truncate block">
+                            <span className="text-sm font-extrabold truncate block" style={{ color: person.color }}>
                               {person.name}
                             </span>
                             {person.isPlaceholder && (
@@ -2632,24 +2678,6 @@ export default function App() {
                 {/* Seating Layout Controls (Edit Mode Only) */}
                 {isSeatingEditMode && (
                   <div className="space-y-3 mb-4 animate-fade-in">
-                    {/* Total Seats count slider/input */}
-                    <div className="bg-slate-50 border border-slate-200/60 p-3 rounded-xl flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Room Capacity</span>
-                        <span className="text-[11px] text-slate-400 font-medium">Number of chairs</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="number"
-                          min="1"
-                          max="30"
-                          value={seats.length}
-                          onChange={(e) => changeSeatCount(parseInt(e.target.value) || 1)}
-                          className="w-14 text-center text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-lg py-1 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                        />
-                      </div>
-                    </div>
-
                     {/* Presets and template buttons */}
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Table Shape</span>
@@ -2685,9 +2713,9 @@ export default function App() {
                             <input
                               type="number"
                               min="1"
-                              max="10"
+                              max="8"
                               value={gridCols}
-                              onChange={(e) => setGridCols(parseInt(e.target.value) || 1)}
+                              onChange={(e) => setGridCols(Math.min(8, Math.max(1, parseInt(e.target.value) || 1)))}
                               className="w-full text-xs font-bold text-slate-700 focus:outline-none"
                             />
                           </div>
@@ -2697,18 +2725,12 @@ export default function App() {
                             <input
                               type="number"
                               min="1"
-                              max="10"
+                              max="6"
                               value={gridRows}
-                              onChange={(e) => setGridRows(parseInt(e.target.value) || 1)}
+                              onChange={(e) => setGridRows(Math.min(6, Math.max(1, parseInt(e.target.value) || 1)))}
                               className="w-full text-xs font-bold text-slate-700 focus:outline-none"
                             />
                           </div>
-                          <button
-                            onClick={() => generateRowsOfSeats(gridCols, gridRows)}
-                            className="bg-slate-800 hover:bg-slate-950 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg shrink-0 transition"
-                          >
-                            Generate
-                          </button>
                         </div>
                       </div>
                     )}
@@ -2718,21 +2740,37 @@ export default function App() {
                 {/* Dynamic Seating Grid Canvas */}
                 <div
                   ref={canvasRef}
-                  className="relative w-full aspect-[4/3] bg-slate-950 rounded-2xl overflow-hidden shadow-inner border border-slate-800"
+                  className="relative w-full aspect-[4/3] bg-white rounded-2xl overflow-hidden shadow-inner border border-slate-200"
                 >
-                  <div className="absolute inset-4 rounded-xl border border-dashed border-slate-800/60 flex items-center justify-center">
+                  {/* Add Unknown Attendee button in the leftmost bottom corner of the visualisation */}
+                  <button
+                    onClick={handleAddUnknownAttendee}
+                    onMouseEnter={() => setIsDoorHovered(true)}
+                    onMouseLeave={() => setIsDoorHovered(false)}
+                    className="absolute bottom-3 left-3 z-20 w-16 h-16 transition-transform duration-200 hover:scale-105 active:scale-95 focus:outline-none cursor-pointer"
+                    title="Add an unknown attendee to the seat list"
+                  >
+                    <img
+                      src={isDoorHovered ? doorOpen : doorClosed}
+                      alt="Add Unknown Attendee"
+                      className="w-full h-full object-contain"
+                      referrerPolicy="no-referrer"
+                    />
+                  </button>
+
+                  <div className="absolute inset-4 rounded-xl border border-dashed border-slate-200/80 flex items-center justify-center">
                     {seatingShape === "round" && (
-                      <div className="w-1/2 h-1/2 rounded-full bg-slate-900/50 border border-slate-800 flex items-center justify-center text-slate-500 text-[10px] font-bold tracking-wider uppercase">
+                      <div className="w-1/2 h-1/2 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 text-[10px] font-bold tracking-wider uppercase shadow-xs">
                         Round Table
                       </div>
                     )}
                     {seatingShape === "rect" && (
-                      <div className="w-2/3 h-1/3 rounded-xl bg-slate-900/50 border border-slate-800 flex items-center justify-center text-slate-500 text-[10px] font-bold tracking-wider uppercase">
+                      <div className="w-2/3 h-1/3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 text-[10px] font-bold tracking-wider uppercase shadow-xs">
                         Conference Table
                       </div>
                     )}
                     {seatingShape === "rows" && (
-                      <div className="w-4/5 h-8 rounded bg-slate-900/50 border border-slate-800 flex items-center justify-center text-slate-500 text-[10px] font-bold uppercase tracking-widest absolute top-2">
+                      <div className="w-4/5 h-8 rounded bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 text-[10px] font-bold uppercase tracking-widest absolute top-2 shadow-xs">
                         Front / Screen Area
                       </div>
                     )}
@@ -2768,24 +2806,24 @@ export default function App() {
                           top: `${seat.y}%`,
                           transform: "translate(-50%, -50%)",
                         }}
-                        className={`absolute select-none transition-all hover:shadow-lg hover:scale-105 group ${isSeatingEditMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} ${!person ? "w-10 h-10 rounded-full border-2 border-dashed border-slate-600 bg-slate-900/80 flex items-center justify-center text-[11px] text-slate-500 font-extrabold border-slate-900" : "w-12 h-12 flex items-center justify-center"}`}
+                        className={`absolute select-none transition-all hover:shadow-lg hover:scale-105 group ${isSeatingEditMode ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"} ${!person ? "w-20 h-20 rounded-full border-2 border-dashed border-slate-300 bg-slate-50/95 flex items-center justify-center text-sm text-slate-400 font-extrabold border-slate-400/80 shadow-xs" : "w-24 h-24 flex items-center justify-center"}`}
                         title={person ? `${person.name} (${person.org})` : `Empty Chair #${seat.id}`}
                       >
                         {person ? (
-                          <div className="relative w-12 h-12 flex items-center justify-center">
+                          <div className="relative w-24 h-24 flex items-center justify-center">
                             {/* Sticker image in its own shape, not cut in circle */}
                             <img
-                              src={getAvatarForPerson(person.id)}
+                              src={getAvatarForPerson(person.id, person.avatarIndex)}
                               alt={person.name}
-                              className="w-12 h-12 object-contain"
+                              className="w-24 h-24 object-contain"
                               referrerPolicy="no-referrer"
                             />
-                            {/* Seated Indicator Colored Dot */}
-                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-slate-950 shadow-sm" style={{ backgroundColor: person.color }}></span>
-                            
-                            {/* Short name form (e.g. PA, DF) as small text below image */}
-                            <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1 text-[8px] font-mono font-black text-slate-300 bg-slate-950/85 px-1 py-0.2 rounded border border-slate-800/40 shadow-xs whitespace-nowrap z-10 uppercase tracking-tight">
-                              {person.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                            {/* Short name form (e.g. Priya A.) as small text below image, colored with person's specific color */}
+                            <span 
+                              className="absolute top-[85%] left-1/2 -translate-x-1/2 text-[10px] font-mono font-black bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-xs whitespace-nowrap z-10 tracking-tight"
+                              style={{ color: person.color }}
+                            >
+                              {formatShortName(person.name)}
                             </span>
                           </div>
                         ) : (
@@ -2799,10 +2837,10 @@ export default function App() {
                               setSeats(prev => prev.map(s => s.id === seat.id ? { ...s, participantId: null } : s));
                               showToast(`Removed ${person.name} from seat #${seat.id}`);
                             }}
-                            className="absolute -top-1 -right-1 w-4 h-4 bg-rose-600 hover:bg-rose-700 text-white rounded-full flex items-center justify-center shadow-md border border-slate-950 transition-opacity opacity-0 group-hover:opacity-100 z-30 cursor-pointer"
+                            className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 hover:bg-rose-600 text-white rounded-full flex items-center justify-center shadow-md border border-white transition-opacity opacity-0 group-hover:opacity-100 z-30 cursor-pointer"
                             title={`Remove ${person.name} from seat`}
                           >
-                            <X className="w-2.5 h-2.5" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
@@ -2834,7 +2872,7 @@ export default function App() {
                         className={`text-xs px-2.5 py-1 rounded-full border flex items-center gap-1.5 text-left transition select-none cursor-grab ${selectedUnseatedId === person.id ? "bg-[#111224] border-[#111224] text-white font-semibold" : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"}`}
                       >
                         <div className="w-6 h-5 flex items-center justify-center relative shrink-0">
-                          <img src={getAvatarForPerson(person.id)} className="w-6 h-5 object-contain" referrerPolicy="no-referrer" />
+                          <img src={getAvatarForPerson(person.id, person.avatarIndex)} className="w-6 h-5 object-contain" referrerPolicy="no-referrer" />
                         </div>
                         {person.name}
                       </button>

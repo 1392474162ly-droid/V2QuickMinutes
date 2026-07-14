@@ -10,7 +10,10 @@ import {
   Layout, 
   ChevronDown,
   ChevronUp,
-  Check
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  UserPlus
 } from "lucide-react";
 // @ts-ignore
 import stickerDog from "../assets/images/sticker_dog.png";
@@ -18,11 +21,42 @@ import stickerDog from "../assets/images/sticker_dog.png";
 import stickerCat from "../assets/images/sticker_cat.png";
 // @ts-ignore
 import stickerTiger from "../assets/images/sticker_tiger.png";
+// @ts-ignore
+import stickerCroc from "../assets/images/sticker_croc.png";
+// @ts-ignore
+import stickerLion from "../assets/images/sticker_lion.png";
+// @ts-ignore
+import stickerTurtle from "../assets/images/sticker_turtle.png";
+// @ts-ignore
+import stickerFlamingo from "../assets/images/sticker_flamingo.png";
+// @ts-ignore
+import stickerPolarbear from "../assets/images/sticker_polarbear.png";
+// @ts-ignore
+import stickerGiraffe from "../assets/images/sticker_giraffe.png";
+// @ts-ignore
+import stickerFox from "../assets/images/sticker_fox.png";
+// @ts-ignore
+import stickerKoala from "../assets/images/sticker_koala.png";
+// @ts-ignore
+import doorClosed from "../assets/images/door_closed_v2.png";
+// @ts-ignore
+import doorOpen from "../assets/images/door_open_v2.png";
 
-const AVATAR_STICKERS = [stickerDog, stickerCat, stickerTiger];
-const getAvatarForPerson = (id: number) => {
+const AVATAR_STICKERS = [stickerDog, stickerCat, stickerTiger, stickerCroc, stickerLion, stickerTurtle, stickerFlamingo, stickerPolarbear, stickerGiraffe, stickerFox, stickerKoala];
+const getAvatarForPerson = (id: number, avatarIndex?: number) => {
+  if (avatarIndex !== undefined && avatarIndex >= 0 && avatarIndex < AVATAR_STICKERS.length) {
+    return AVATAR_STICKERS[avatarIndex];
+  }
   const idx = ((id - 1) % AVATAR_STICKERS.length + AVATAR_STICKERS.length) % AVATAR_STICKERS.length;
   return AVATAR_STICKERS[idx];
+};
+
+export const formatShortName = (fullName: string) => {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 1) return parts[0] || "";
+  const first = parts[0];
+  const secondInitial = parts[1].charAt(0).toUpperCase();
+  return `${first} ${secondInitial}.`;
 };
 
 export interface Participant {
@@ -32,6 +66,7 @@ export interface Participant {
   title: string;
   color: string;
   isPlaceholder?: boolean;
+  avatarIndex?: number;
 }
 
 export interface Seat {
@@ -85,6 +120,31 @@ export default function StartPage({
   const [newName, setNewName] = useState("");
   const [newOrg, setNewOrg] = useState("");
   const [newTitle, setNewTitle] = useState("");
+  const [currentSelectedAvatarIdx, setCurrentSelectedAvatarIdx] = useState<number>(0);
+  const [isDoorHovered, setIsDoorHovered] = useState(false);
+
+  // Helper to add an unknown attendee
+  const handleAddUnknownAttendee = () => {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const unknownCount = participants.filter(p => p.name.startsWith("Unknown Attendee ")).length;
+    const letter = alphabet[unknownCount % 26] + (unknownCount >= 26 ? Math.floor(unknownCount / 26) + 1 : "");
+    const name = `Unknown Attendee ${letter}`;
+    const colors = ["#0F766E", "#C2410C", "#1D4ED8", "#7C3AED", "#DB2777", "#2563EB", "#059669"];
+    const randColor = colors[participants.length % colors.length];
+
+    const newPerson: Participant = {
+      id: Date.now(),
+      name,
+      org: "External Guest",
+      title: "Unknown",
+      color: randColor,
+      isPlaceholder: true,
+      avatarIndex: participants.length % AVATAR_STICKERS.length
+    };
+
+    setParticipants(prev => [...prev, newPerson]);
+    showToast(`Added ${newPerson.name}`);
+  };
 
   // Dragging states
   const [draggingSeatId, setDraggingSeatId] = useState<number | null>(null);
@@ -219,21 +279,23 @@ export default function StartPage({
       org: finalOrg,
       title: finalTitle,
       color: randColor,
-      isPlaceholder
+      isPlaceholder,
+      avatarIndex: currentSelectedAvatarIdx
     };
 
     setParticipants(prev => [...prev, newPerson]);
     setNewName("");
     setNewOrg("");
     setNewTitle("");
+    setCurrentSelectedAvatarIdx(prev => (prev + 1) % AVATAR_STICKERS.length);
     showToast(`Added ${newPerson.name} to list`);
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#111224] flex flex-col md:flex-row overflow-hidden select-none">
+    <div className="min-h-screen w-full bg-slate-100 flex flex-col md:flex-row overflow-hidden select-none">
       
       {/* ----------------- LEFT 1/3: BRANDING LOGO & PREMIUM HALF NOTEBOOK ----------------- */}
-      <div className="w-full md:w-1/3 bg-[#161725] border-b md:border-b-0 md:border-r border-[#C89E5F]/15 flex flex-col p-4 md:p-6 relative md:h-screen min-h-0 shrink-0 gap-4">
+      <div className="w-full md:w-1/3 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200/85 flex flex-col p-4 md:p-6 relative md:h-screen min-h-0 shrink-0 gap-4">
         
         {/* Top Header Logo & Branding (Moved to the left panel) */}
         <div className="space-y-3 z-10 shrink-0">
@@ -241,7 +303,7 @@ export default function StartPage({
             <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FAF6EE] to-[#E9DFCE] border border-[#C89E5F]/40 text-[#C89E5F] font-serif font-black text-xl shadow-md">
               Q
             </div>
-            <span className="font-serif text-2xl font-black text-white tracking-tight">
+            <span className="font-serif text-2xl font-black text-slate-800 tracking-tight">
               QuickMinutes
             </span>
           </div>
@@ -249,14 +311,14 @@ export default function StartPage({
         </div>
 
         {/* The Realistic Notebook Page Card */}
-        <div className="w-full flex-1 bg-[#FAF6EE] rounded-r-3xl rounded-l-md shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] border-y border-r border-[#E9DFCE] relative flex flex-col p-4 md:p-6 md:py-5 overflow-y-auto min-h-0">
+        <div className="w-full flex-1 bg-[#FAF6EE] rounded-r-3xl rounded-l-md shadow-[0_15px_40px_-15px_rgba(0,0,0,0.15)] border-y border-r border-[#E9DFCE] relative flex flex-col p-4 md:p-6 md:py-5 overflow-y-auto min-h-0">
           
           {/* 3D Binder Spiral seam on the left edge */}
           <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#DFD5C0] via-[#FAF6EE] to-[#EBE0C9] border-r border-[#D9CBAC]/60 rounded-l hidden md:flex flex-col justify-between py-12 pointer-events-none z-20">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="relative flex items-center justify-center -ml-2">
                 {/* Paper hole */}
-                <div className="w-3.5 h-3.5 rounded-full bg-[#111224] border border-[#D1C3A7] shadow-inner" />
+                <div className="w-3.5 h-3.5 rounded-full bg-slate-200 border border-slate-300 shadow-inner" />
                 {/* Metal ring curving out */}
                 <div className="absolute left-[-20px] w-12 h-6 rounded-full border-[3px] border-t-slate-300 border-b-slate-400 border-l-slate-200 border-r-transparent rotate-12 filter drop-shadow-md" />
               </div>
@@ -266,99 +328,8 @@ export default function StartPage({
           {/* Notebook Lined Paper Decorative Heading margin */}
           <div className="md:pl-10 space-y-3 flex-1 flex flex-col min-h-0 justify-between">
             
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-dashed border-slate-300/80 pb-2 shrink-0">
-              <div className="space-y-0.5">
-                <span className="text-[9px] font-mono font-black text-[#8C6D3F] uppercase tracking-widest block">
-                  Notebook Section 01
-                </span>
-                <h3 className="font-serif text-2xl font-black text-slate-800 tracking-tight leading-none">
-                  Configure Boardroom
-                </h3>
-              </div>
-            </div>
-
-            {/* SEATING PRESET CONTROLS & CAPACITY (Stacked vertically to never get cut off) */}
-            <div className="grid grid-cols-1 gap-3 shrink-0">
-              {/* Room Capacity Section */}
-              <div className="bg-white/60 border border-slate-200/60 p-2 px-3 rounded-xl flex flex-row items-center justify-between gap-4">
-                <span className="text-xs font-semibold text-slate-500 shrink-0">Number of chairs</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="24"
-                  value={seats.length}
-                  onChange={(e) => changeSeatCount(parseInt(e.target.value) || 1)}
-                  className="w-16 text-center text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-lg py-1 focus:outline-none focus:ring-1 focus:ring-teal-500 shadow-xs"
-                />
-              </div>
-
-              {/* Table Shape Selector */}
-              <div className="bg-white/60 border border-slate-200/60 p-1.5 px-3 rounded-xl flex flex-row items-center justify-between gap-3">
-                <span className="text-xs font-semibold text-slate-500 shrink-0">Layout presets</span>
-                <div className="flex gap-1 bg-slate-100 p-0.5 rounded-lg flex-1">
-                  <button
-                    onClick={() => applySeatingTemplate("round")}
-                    className={`flex-1 text-center text-[10px] py-1.5 rounded-md transition font-extrabold ${seatingShape === "round" ? "bg-white text-[#C89E5F] shadow-sm border border-[#C89E5F]/10" : "text-slate-500 hover:text-slate-700"}`}
-                  >
-                    ◯ Round
-                  </button>
-                  <button
-                    onClick={() => applySeatingTemplate("rect")}
-                    className={`flex-1 text-center text-[10px] py-1.5 rounded-md transition font-extrabold ${seatingShape === "rect" ? "bg-white text-[#C89E5F] shadow-sm border border-[#C89E5F]/10" : "text-slate-500 hover:text-slate-700"}`}
-                  >
-                    ▭ Rect
-                  </button>
-                  <button
-                    onClick={() => applySeatingTemplate("rows")}
-                    className={`flex-1 text-center text-[10px] py-1.5 rounded-md transition font-extrabold ${seatingShape === "rows" ? "bg-white text-[#C89E5F] shadow-sm border border-[#C89E5F]/10" : "text-slate-500 hover:text-slate-700"}`}
-                  >
-                    ▤ Rows
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Matrix row-grid generation for Rows Layout */}
-            {seatingShape === "rows" && (
-              <div className="bg-white/60 border border-slate-200/60 rounded-xl p-2 px-4 flex items-center justify-between gap-4 animate-in fade-in duration-150 shrink-0">
-                <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider shrink-0">Row Grid Matrix:</span>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1">
-                    <span className="text-[9px] text-slate-400 font-bold">Cols:</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={gridCols}
-                      onChange={(e) => setGridCols(parseInt(e.target.value) || 1)}
-                      className="w-8 text-xs font-bold text-slate-700 focus:outline-none bg-transparent"
-                    />
-                  </div>
-                  <span className="text-slate-400 text-xs font-bold">×</span>
-                  <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-1">
-                    <span className="text-[9px] text-slate-400 font-bold">Rows:</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={gridRows}
-                      onChange={(e) => setGridRows(parseInt(e.target.value) || 1)}
-                      className="w-8 text-xs font-bold text-slate-700 focus:outline-none bg-transparent"
-                    />
-                  </div>
-                  <button
-                    onClick={() => generateRowsOfSeats(gridCols, gridRows)}
-                    className="bg-slate-800 hover:bg-slate-950 text-white text-[10px] font-bold py-1 px-3 rounded-md shrink-0 transition"
-                  >
-                    Generate
-                  </button>
-                </div>
-              </div>
-            )}
-            
             {/* ACTIVE ATTENDEES (Changed to single column grid-cols-1) */}
-            <div className="space-y-1.5 border-t border-dashed border-slate-300 pt-3 flex-1 flex flex-col min-h-0">
+            <div className="space-y-1.5 pt-1 flex-1 flex flex-col min-h-0">
               <span className="text-[10px] font-mono font-black text-slate-500 uppercase tracking-wider block">
                 ACTIVE ATTENDEES
               </span>
@@ -388,18 +359,16 @@ export default function StartPage({
                         {/* Sticker in its own shape, not cut in circle */}
                         <div className="w-12 h-10 flex items-center justify-center shrink-0 relative">
                           <img
-                            src={getAvatarForPerson(person.id)}
+                            src={getAvatarForPerson(person.id, person.avatarIndex)}
                             alt={person.name}
                             className="w-12 h-10 object-contain"
                             referrerPolicy="no-referrer"
                           />
-                          {/* Colored dot in corner of avatar for organization color coding */}
-                          <span className="absolute bottom-0 right-1 w-2.5 h-2.5 rounded-full border border-white shadow-xs" style={{ backgroundColor: person.color }}></span>
                         </div>
                         
                         <div className="flex-1 min-w-0 text-left">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-extrabold text-slate-800 truncate block">
+                            <span className="text-xs font-extrabold truncate block" style={{ color: person.color }}>
                               {person.name}
                             </span>
                             {person.isPlaceholder && (
@@ -459,29 +428,62 @@ export default function StartPage({
               </button>
 
               {isFormExpanded && (
-                <form onSubmit={handleCreateParticipant} className="space-y-1.5 mt-2 animate-fade-in">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-                    <input
-                      type="text"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      placeholder="Name (e.g. Dana Fowler)"
-                      className="text-[11px] bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#C89E5F] shadow-xs"
-                    />
-                    <input
-                      type="text"
-                      value={newOrg}
-                      onChange={(e) => setNewOrg(e.target.value)}
-                      placeholder="Organisation"
-                      className="text-[11px] bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#C89E5F] shadow-xs"
-                    />
-                    <input
-                      type="text"
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      placeholder="Title / Role"
-                      className="text-[11px] bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#C89E5F] shadow-xs"
-                    />
+                <form onSubmit={handleCreateParticipant} className="space-y-2 mt-2 animate-fade-in text-slate-800">
+                  <div className="flex gap-2.5 items-center">
+                    {/* Left: Avatar Selector with Arrow Switchers (No "AVATAR" text, enlarged image with hover scale effect) */}
+                    <div className="flex items-center justify-between bg-slate-100/60 p-2 rounded-xl border border-slate-200/60 shrink-0 w-36 h-24 overflow-visible relative z-20">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentSelectedAvatarIdx(prev => (prev - 1 + AVATAR_STICKERS.length) % AVATAR_STICKERS.length)}
+                        className="p-1.5 hover:bg-slate-200/80 rounded-full transition text-slate-600 cursor-pointer z-30"
+                        title="Previous Avatar"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <div className="w-18 h-18 flex items-center justify-center relative overflow-visible">
+                        <img
+                          src={AVATAR_STICKERS[currentSelectedAvatarIdx]}
+                          alt="Selected Avatar"
+                          className="w-18 h-18 object-contain transition-all duration-300 ease-out hover:scale-160 hover:rotate-6 cursor-pointer hover:drop-shadow-xl select-none"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentSelectedAvatarIdx(prev => (prev + 1) % AVATAR_STICKERS.length)}
+                        className="p-1.5 hover:bg-slate-200/80 rounded-full transition text-slate-600 cursor-pointer z-30"
+                        title="Next Avatar"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    {/* Right: Three Inputs (Name, Org, Title) */}
+                    <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+                      <input
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        placeholder="Name (e.g. Dana Fowler)"
+                        className="text-[11px] w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 focus:outline-none focus:border-[#C89E5F] shadow-xs text-slate-800"
+                      />
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <input
+                          type="text"
+                          value={newOrg}
+                          onChange={(e) => setNewOrg(e.target.value)}
+                          placeholder="Organisation"
+                          className="text-[11px] w-full bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#C89E5F] shadow-xs text-slate-800"
+                        />
+                        <input
+                          type="text"
+                          value={newTitle}
+                          onChange={(e) => setNewTitle(e.target.value)}
+                          placeholder="Title / Role"
+                          className="text-[11px] w-full bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#C89E5F] shadow-xs text-slate-800"
+                        />
+                      </div>
+                    </div>
                   </div>
                   <button
                     type="submit"
@@ -499,33 +501,90 @@ export default function StartPage({
       </div>
 
       {/* ----------------- RIGHT 2/3: MEETING ROOM VISUALISATION (Now 2/3 and on the right) ----------------- */}
-      <div className="w-full md:w-2/3 p-6 md:p-8 flex flex-col justify-between bg-[#0e0f1e] border-b md:border-b-0 md:border-l border-[#C89E5F]/15 relative md:h-screen overflow-y-auto min-h-0">
+      <div className="w-full md:w-2/3 p-6 md:p-8 flex flex-col justify-between bg-[#F8FAFC] border-b md:border-b-0 md:border-l border-slate-200 relative md:h-screen overflow-y-auto min-h-0">
         {/* Background glow flares */}
-        <div className="absolute top-1/4 left-[-20%] w-[120%] h-[40%] rounded-full bg-[#C89E5F]/5 blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-1/4 right-[-20%] w-[120%] h-[40%] rounded-full bg-teal-500/5 blur-[100px] pointer-events-none" />
+        <div className="absolute top-1/4 left-[-20%] w-[120%] h-[40%] rounded-full bg-[#C89E5F]/3 blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-[-20%] w-[120%] h-[40%] rounded-full bg-teal-500/3 blur-[100px] pointer-events-none" />
 
         {/* Top Header Workspace and Premium Light Save Button */}
-        <div className="flex items-center justify-between z-10 border-b border-[#C89E5F]/10 pb-4 shrink-0">
+        <div className="flex items-center justify-between z-10 border-b border-slate-200 pb-4 shrink-0">
           <div className="space-y-1">
             <span className="text-[10px] font-mono font-black text-[#C89E5F] uppercase tracking-[0.2em] block">
               Workspace Visualization
             </span>
-            <h4 className="text-sm font-semibold text-slate-300">
+            <h4 className="text-sm font-semibold text-slate-800">
               Interactive Seating Arrangement
             </h4>
           </div>
           {/* Light-coloured Save & Start Notes Button */}
           <button
             onClick={onSaveSeating}
-            className="bg-[#FAF6EE] hover:bg-[#EBE0C9] text-[#111224] font-serif font-black text-xs py-2 px-4 rounded-xl border border-[#C89E5F]/30 transition duration-200 shadow-md flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+            className="bg-white hover:bg-[#FAF6EE] text-slate-800 font-serif font-black text-xs py-2 px-4 rounded-xl border border-slate-200 transition duration-200 shadow-sm flex items-center justify-center gap-1.5 cursor-pointer shrink-0 hover:border-[#C89E5F]/40"
           >
             Save & Start Notes
             <ArrowRight className="w-3.5 h-3.5 text-[#C89E5F]" />
           </button>
         </div>
 
+        {/* Layout presets section shifted to the right above the visualisation */}
+        <div className="mt-4 bg-slate-100/60 border border-slate-200/80 p-3 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 z-10 shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-serif font-black text-slate-700 shrink-0">Layout presets</span>
+            <div className="flex gap-1 bg-white p-0.5 rounded-xl border border-slate-200/60 shadow-2xs">
+              <button
+                onClick={() => applySeatingTemplate("round")}
+                className={`px-3 py-1.5 rounded-lg transition text-xs font-extrabold cursor-pointer ${seatingShape === "round" ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}
+              >
+                ◯ Round Table
+              </button>
+              <button
+                onClick={() => applySeatingTemplate("rect")}
+                className={`px-3 py-1.5 rounded-lg transition text-xs font-extrabold cursor-pointer ${seatingShape === "rect" ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}
+              >
+                ▭ Conference Rect
+              </button>
+              <button
+                onClick={() => applySeatingTemplate("rows")}
+                className={`px-3 py-1.5 rounded-lg transition text-xs font-extrabold cursor-pointer ${seatingShape === "rows" ? "bg-slate-800 text-white shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}
+              >
+                ▤ Row Grid
+              </button>
+            </div>
+          </div>
+
+          {/* ROW GRID MATRIX input container designed to prevent overflow */}
+          {seatingShape === "rows" && (
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-2xs shrink-0 animate-in fade-in duration-200">
+              <span className="text-[10px] font-mono font-black text-slate-500 uppercase tracking-wider">Grid Matrix:</span>
+              <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5">
+                <span className="text-[8px] text-slate-400 font-extrabold uppercase">Cols</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="8"
+                  value={gridCols}
+                  onChange={(e) => setGridCols(Math.min(8, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="w-7 text-xs font-bold text-slate-700 focus:outline-none bg-transparent text-center"
+                />
+              </div>
+              <span className="text-slate-400 text-xs font-bold">×</span>
+              <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5">
+                <span className="text-[8px] text-slate-400 font-extrabold uppercase">Rows</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="6"
+                  value={gridRows}
+                  onChange={(e) => setGridRows(Math.min(6, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="w-7 text-xs font-bold text-slate-700 focus:outline-none bg-transparent text-center"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* SEATING INTERACTIVE CANVAS */}
-        <div className="space-y-2 z-10 my-6 flex-1 flex flex-col justify-center min-h-0">
+        <div className="space-y-2 z-10 my-4 flex-1 flex flex-col justify-center min-h-0">
           <span className="text-[10px] font-mono font-black text-[#C89E5F] uppercase tracking-[0.25em] block shrink-0">
             Room Seating Layout
           </span>
@@ -534,21 +593,37 @@ export default function StartPage({
             ref={localCanvasRef}
             onMouseMove={handleContainerMouseMove}
             onTouchMove={handleContainerTouchMove}
-            className="relative w-full aspect-[16/11] bg-[#060814] rounded-2xl overflow-hidden shadow-2xl border border-slate-950 flex-1 min-h-[300px]"
+            className="relative w-full aspect-[16/11] bg-white rounded-2xl overflow-hidden shadow-inner border border-slate-200 flex-1 min-h-[300px]"
           >
-            <div className="absolute inset-4 rounded-xl border border-dashed border-slate-800/40 flex items-center justify-center pointer-events-none">
+            {/* Add Unknown Attendee button in the leftmost bottom corner of the visualisation */}
+            <button
+              onClick={handleAddUnknownAttendee}
+              onMouseEnter={() => setIsDoorHovered(true)}
+              onMouseLeave={() => setIsDoorHovered(false)}
+              className="absolute bottom-3 left-3 z-20 w-16 h-16 transition-transform duration-200 hover:scale-105 active:scale-95 focus:outline-none cursor-pointer"
+              title="Add an unknown attendee to the seat list"
+            >
+              <img
+                src={isDoorHovered ? doorOpen : doorClosed}
+                alt="Add Unknown Attendee"
+                className="w-full h-full object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </button>
+
+            <div className="absolute inset-4 rounded-xl border border-dashed border-slate-200/80 flex items-center justify-center pointer-events-none">
               {seatingShape === "round" && (
-                <div className="w-[45%] h-[45%] rounded-full bg-slate-900/30 border border-slate-800/60 flex items-center justify-center text-slate-500 text-[10px] font-mono font-extrabold tracking-widest uppercase">
+                <div className="w-[45%] h-[45%] rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 text-[10px] font-mono font-extrabold tracking-widest uppercase shadow-xs">
                   Round Table
                 </div>
               )}
               {seatingShape === "rect" && (
-                <div className="w-[60%] h-[30%] rounded-xl bg-slate-900/30 border border-slate-800/60 flex items-center justify-center text-slate-500 text-[10px] font-mono font-extrabold tracking-widest uppercase">
+                <div className="w-[60%] h-[30%] rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 text-[10px] font-mono font-extrabold tracking-widest uppercase shadow-xs">
                   Conference Table
                 </div>
               )}
               {seatingShape === "rows" && (
-                <div className="w-[80%] h-8 rounded bg-slate-900/30 border border-slate-800/60 flex items-center justify-center text-slate-500 text-[10px] font-mono font-extrabold uppercase tracking-widest absolute top-2">
+                <div className="w-[80%] h-8 rounded bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 text-[10px] font-mono font-extrabold uppercase tracking-widest absolute top-2 shadow-xs">
                   Front Area
                 </div>
               )}
@@ -591,24 +666,24 @@ export default function StartPage({
                     top: `${seat.y}%`,
                     transform: "translate(-50%, -50%)",
                   }}
-                  className={`absolute select-none transition-all hover:scale-110 group cursor-grab active:cursor-grabbing ${!person ? "w-10 h-10 rounded-full border-2 border-dashed border-slate-600 bg-slate-900/80 flex items-center justify-center text-[10px] text-slate-500 font-bold shadow-md border-slate-950" : "w-12 h-12 flex items-center justify-center"}`}
+                  className={`absolute select-none transition-all hover:scale-110 group cursor-grab active:cursor-grabbing ${!person ? "w-20 h-20 rounded-full border-2 border-dashed border-slate-300 bg-slate-50/95 flex items-center justify-center text-sm text-slate-400 font-bold shadow-xs border-slate-400/80" : "w-24 h-24 flex items-center justify-center"}`}
                   title={person ? `${person.name} (${person.org})` : `Empty Chair #${seat.id}`}
                 >
                   {person ? (
-                    <div className="relative w-12 h-12 flex items-center justify-center">
+                    <div className="relative w-24 h-24 flex items-center justify-center">
                       {/* Sticker image in its own shape, not cut in circle */}
                       <img
-                        src={getAvatarForPerson(person.id)}
+                        src={getAvatarForPerson(person.id, person.avatarIndex)}
                         alt={person.name}
-                        className="w-12 h-12 object-contain"
+                        className="w-24 h-24 object-contain"
                         referrerPolicy="no-referrer"
                       />
-                      {/* Seated Indicator Colored Dot */}
-                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-slate-950 shadow-sm" style={{ backgroundColor: person.color }}></span>
-                      
-                      {/* Short name form (e.g. PA, DF) as small text below image */}
-                      <span className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 text-[8px] font-mono font-black text-slate-300 bg-slate-950/85 px-1 py-0.2 rounded border border-slate-800/40 shadow-xs whitespace-nowrap z-10 uppercase tracking-tight">
-                        {person.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                      {/* Short name form (e.g. Priya A.) as small text below image, colored with person's specific color */}
+                      <span 
+                        className="absolute top-[85%] left-1/2 -translate-x-1/2 text-[10px] font-mono font-black bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-xs whitespace-nowrap z-10 tracking-tight"
+                        style={{ color: person.color }}
+                      >
+                        {formatShortName(person.name)}
                       </span>
                     </div>
                   ) : (
@@ -624,9 +699,9 @@ export default function StartPage({
                         setSeats(prev => prev.map(s => s.id === seat.id ? { ...s, participantId: null } : s));
                         showToast(`Unseated ${person.name}`);
                       }}
-                      className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full flex items-center justify-center shadow-md border border-slate-950 transition-opacity opacity-0 group-hover:opacity-100 z-30 cursor-pointer"
+                      className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 hover:bg-rose-600 text-white rounded-full flex items-center justify-center shadow-md border border-white transition-opacity opacity-0 group-hover:opacity-100 z-30 cursor-pointer"
                     >
-                      <X className="w-2.5 h-2.5" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -640,7 +715,7 @@ export default function StartPage({
         </div>
 
         {/* Bottom Signature / Footer */}
-        <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest z-10 pt-4 border-t border-slate-800/30 shrink-0">
+        <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest z-10 pt-4 border-t border-slate-200 shrink-0">
           Executive Seating Hub • v2.1
         </div>
       </div>

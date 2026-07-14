@@ -1,0 +1,6 @@
+{
+  "name": "QuickMinutes",
+  "description": "An interactive full-stack tool for taking and formatting meeting minutes, featuring custom layouts, seating charts, live translation transcripts, and slide-deck reference injection.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

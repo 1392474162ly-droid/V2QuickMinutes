@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-serif: "Playfair Display", serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+:root {
+  --paper: #FFFFFF;
+  --ink: #000000;
+  --muted: #6B7280;
+  --line: #E5E7EB;
+  --brand: #0F766E;
+  --brand-dim: #F0FDFA;
+  --brand-ink: #115E59;
+  --decision: #059669;
+  --decision-tint: #ECFDF5;
+  --decision-mark: #A7F3D0;
+  --action: #C2410C;
+  --action-tint: #FFF7ED;
+  --action-mark: #FED7AA;
+}
+
+/* Base custom styles */
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  background-color: #F8FAFC;
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* Custom styles for hoverable decision and action item tags */
+mark.tag-decision, mark.tag-action {
+  position: relative;
+  cursor: pointer;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  mix-blend-mode: multiply;
+  color: inherit;
+  transition: background-color 0.2s ease;
+}
+
+mark.tag-decision {
+  background-color: var(--decision-mark);
+}
+
+mark.tag-action {
+  background-color: var(--action-mark);
+}
+
+/* Tooltip on hover */
+mark.tag-decision::before {
+  content: "Decision";
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background-color: var(--decision);
+  color: #FFFFFF;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 100;
+}
+
+mark.tag-decision:hover::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+mark.tag-action::before {
+  content: "Action Item";
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background-color: var(--action);
+  color: #FFFFFF;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 100;
+}
+
+mark.tag-action:hover::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Speaker styling */
+.speaker-tag {
+  font-weight: 700;
+  font-family: var(--font-sans);
+}
+
+.speaker-time {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  color: var(--muted);
+  margin-left: 5px;
+  margin-right: 2px;
+}
+
+.topic-header {
+  font-family: var(--font-serif);
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #111224;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 6px;
+  border-bottom: 1.5px solid #faf8f5;
+}
+
+#minutes-editor-canvas, #minutes-editor-canvas p {
+  color: #000000 !important;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
